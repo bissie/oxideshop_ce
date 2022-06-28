@@ -14,6 +14,7 @@ use OxidEsales\Eshop\Core\Module\ModuleVariablesLocator;
 use OxidEsales\Eshop\Core\Module\ModuleSmartyPluginDirectoryRepository;
 use OxidEsales\Eshop\Core\Registry;
 use OxidEsales\Eshop\Core\ShopIdCalculator as EshopShopIdCalculator;
+use OxidEsales\EshopCommunity\Internal\Framework\Module\Facade\ActiveModulesDataProviderBridgeInterface;
 use OxidEsales\EshopCommunity\Internal\Framework\Module\TemplateExtension\TemplateBlockLoaderBridgeInterface;
 use OxidEsales\EshopCommunity\Internal\Framework\Templating\TemplateRendererBridgeInterface;
 use OxidEsales\EshopCommunity\Internal\Framework\Templating\TemplateRendererInterface;
@@ -105,7 +106,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     public function getTemplateOutput($templateName, $oObject)
     {
-        $debugMode = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('iDebug');
+        $debugMode = Registry::getConfig()->getConfigParam('iDebug');
 
         // assign
         $viewData = $oObject->getViewData();
@@ -167,13 +168,13 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
 
         //starting session if not yet started as all exception
         //messages are stored in session
-        $session = \OxidEsales\Eshop\Core\Registry::getSession();
+        $session = Registry::getSession();
         if (!$session->getId() && !$session->isHeaderSent()) {
             $session->setForceNewSession();
             $session->start();
         }
 
-        $sessionErrors = \OxidEsales\Eshop\Core\Registry::getSession()->getVariable('Errors');
+        $sessionErrors = Registry::getSession()->getVariable('Errors');
         if ($exception instanceof \OxidEsales\Eshop\Core\Exception\StandardException) {
             $exceptionToDisplay = oxNew(\OxidEsales\Eshop\Core\Exception\ExceptionToDisplay::class);
             $exceptionToDisplay->setMessage($exception->getMessage());
@@ -203,14 +204,14 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
 
         if ($exception) {
             $sessionErrors[$destination][] = serialize($exception);
-            \OxidEsales\Eshop\Core\Registry::getSession()->setVariable('Errors', $sessionErrors);
+            Registry::getSession()->setVariable('Errors', $sessionErrors);
 
             if ($activeController == '') {
                 $activeController = Registry::getRequest()->getRequestEscapedParameter('actcontrol');
             }
             if ($activeController) {
                 $aControllerErrors[$destination] = $activeController;
-                \OxidEsales\Eshop\Core\Registry::getSession()->setVariable('ErrorController', $aControllerErrors);
+                Registry::getSession()->setVariable('ErrorController', $aControllerErrors);
             }
         }
     }
@@ -300,7 +301,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     public function getTemplateDirs()
     {
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
 
         // buffer for CE (main) edition templates
         $mainTemplatesDirectory = $config->getTemplateDir($this->isAdmin());
@@ -323,7 +324,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     public function getTemplateCompileId()
     {
-        $shopId = \OxidEsales\Eshop\Core\Registry::getConfig()->getShopId();
+        $shopId = Registry::getConfig()->getShopId();
         $templateDirectories = $this->getTemplateDirs();
 
         return md5(reset($templateDirectories) . '__' . $shopId);
@@ -336,7 +337,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     public function getSmartyDir()
     {
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
 
         //check for the Smarty dir
         $compileDir = $config->getConfigParam('sCompileDir');
@@ -361,7 +362,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     protected function _fillCommonSmartyProperties($smarty) // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
     {
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
         $smarty->left_delimiter = '[{';
         $smarty->right_delimiter = '}]';
 
@@ -382,14 +383,14 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
         $smarty->cache_dir = $smartyDir;
         $smarty->template_dir = $this->getTemplateDirs();
         $smarty->compile_id = $this->getTemplateCompileId();
-        $smarty->default_template_handler_func = [\OxidEsales\Eshop\Core\Registry::getUtilsView(), '_smartyDefaultTemplateHandler'];
+        $smarty->default_template_handler_func = [Registry::getUtilsView(), '_smartyDefaultTemplateHandler'];
 
         $smarty->plugins_dir = array_merge(
             $this->getSmartyPluginDirectories(),
             $smarty->plugins_dir
         );
 
-        $coreDirectory = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('sCoreDir');
+        $coreDirectory = Registry::getConfig()->getConfigParam('sCoreDir');
 
         include_once $coreDirectory . 'Smarty/Plugin/prefilter.oxblock.php';
         $smarty->register_prefilter('smarty_prefilter_oxblock');
@@ -462,7 +463,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     protected function _smartyCompileCheck($smarty) // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
     {
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
         $smarty->compile_check = $config->getConfigParam('blCheckTemplates');
         if ($config->isProductiveMode()) {
             // override in any case
@@ -485,7 +486,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     public function _smartyDefaultTemplateHandler($resourceType, $resourceName, &$resourceContent, &$resourceTimestamp, $smarty) // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
     {
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
         if ($resourceType == 'file' && !is_readable($resourceName)) {
             $resourceName = $config->getTemplatePath($resourceName, $config->isAdmin());
             $resourceContent = $smarty->_read_file($resourceName);
@@ -510,7 +511,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
     {
         $templateBlocksWithContent = [];
 
-        $config = \OxidEsales\Eshop\Core\Registry::getConfig();
+        $config = Registry::getConfig();
 
         $tplDir = trim($config->getConfigParam('_sTemplateDir'), '/\\');
         $templateFileName = str_replace(['\\', '//'], '/', $templateFileName);
@@ -521,13 +522,11 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
         if ($this->isShopTemplateBlockOverriddenByActiveModule()) {
             $shopId = $config->getShopId();
 
-            $ids = $this->getActiveModuleInfo();
-
-            $activeModulesId = array_keys($ids);
+            $activeModulesIds = $this->getContainer()->get(ActiveModulesDataProviderBridgeInterface::class)->getModuleIds();
             $activeThemeIds = oxNew(\OxidEsales\Eshop\Core\Theme::class)->getActiveThemesList();
 
             $templateBlockRepository = oxNew(ModuleTemplateBlockRepository::class);
-            $activeBlockTemplates = $templateBlockRepository->getBlocks($templateFileName, $activeModulesId, $shopId, $activeThemeIds);
+            $activeBlockTemplates = $templateBlockRepository->getBlocks($templateFileName, $activeModulesIds, $shopId, $activeThemeIds);
 
             if ($activeBlockTemplates) {
                 $activeBlockTemplatesByTheme = $this->filterTemplateBlocks($activeBlockTemplates);
@@ -540,21 +539,6 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
     }
 
     /**
-     * Returns active module Ids
-     *
-     * @return array
-     */
-    protected function getActiveModuleInfo()
-    {
-        if ($this->_aActiveModuleInfo === null) {
-            $modulelist = oxNew(\OxidEsales\Eshop\Core\Module\ModuleList::class);
-            $this->_aActiveModuleInfo = $modulelist->getActiveModuleInfo();
-        }
-
-        return $this->_aActiveModuleInfo;
-    }
-
-    /**
      * Add active theme at the end of theme path to form full path to templates.
      *
      * @param string $themePath
@@ -563,7 +547,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
      */
     protected function addActiveThemeId($themePath)
     {
-        $themeId = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('sTheme');
+        $themeId = Registry::getConfig()->getConfigParam('sTheme');
         if ($this->isAdmin()) {
             $themeId = $this->getContainer()->get(AdminThemeBridgeInterface::class)->getActiveTheme();
         }
@@ -666,7 +650,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
     private function formListOfDuplicatedBlocks($activeBlockTemplates)
     {
         $templateBlocksToExchange = [];
-        $customThemeId = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('sCustomTheme');
+        $customThemeId = Registry::getConfig()->getConfigParam('sCustomTheme');
 
         foreach ($activeBlockTemplates as $activeBlockTemplate) {
             if ($activeBlockTemplate['OXTHEME']) {
@@ -716,7 +700,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
     {
         $activeBlockTemplates = $templateBlocks;
         $templateBlocks = [];
-        $customThemeId = \OxidEsales\Eshop\Core\Registry::getConfig()->getConfigParam('sCustomTheme');
+        $customThemeId = Registry::getConfig()->getConfigParam('sCustomTheme');
         foreach ($activeBlockTemplates as $activeBlockTemplate) {
             if (
                 !in_array($this->prepareBlockKey($activeBlockTemplate), $templateBlocksToExchange['custom_theme'])
@@ -779,7 +763,7 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
                         $activeBlockTemplate['OXMODULE']
                     );
             } catch (\OxidEsales\Eshop\Core\Exception\StandardException $exception) {
-                \OxidEsales\Eshop\Core\Registry::getLogger()->error($exception->getMessage(), [$exception]);
+                Registry::getLogger()->error($exception->getMessage(), [$exception]);
             }
         }
 
@@ -802,12 +786,11 @@ class UtilsView extends \OxidEsales\Eshop\Core\Base
 
         $moduleOverridesTemplate = false;
 
-        $ids = $this->getActiveModuleInfo();
-        if (count($ids)) {
+        $activeModulesIds = $this->getContainer()->get(ActiveModulesDataProviderBridgeInterface::class)->getModuleIds();
+        if (count($activeModulesIds)) {
             $templateBlockRepository = oxNew(ModuleTemplateBlockRepository::class);
-            $shopId = \OxidEsales\Eshop\Core\Registry::getConfig()->getShopId();
-            $activeModulesId = array_keys($ids);
-            $blocksCount = $templateBlockRepository->getBlocksCount($activeModulesId, $shopId);
+
+            $blocksCount = $templateBlockRepository->getBlocksCount($activeModulesIds, Registry::getConfig()->getShopId());
 
             if ($blocksCount) {
                 $moduleOverridesTemplate = true;
